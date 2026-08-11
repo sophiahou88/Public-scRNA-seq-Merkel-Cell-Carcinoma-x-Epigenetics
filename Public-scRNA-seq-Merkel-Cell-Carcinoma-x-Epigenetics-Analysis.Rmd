@@ -1602,8 +1602,7 @@ top10.tumor.markers <- tumor_markers %>%
 View(top10.tumor.markers)
 ```
 
-................................................ TUMOR CELL SUBSET CLUSTER 
-
+CLUSTERS
 ```{r}
 #Check clusters/markers
 markers <- FindAllMarkers(
