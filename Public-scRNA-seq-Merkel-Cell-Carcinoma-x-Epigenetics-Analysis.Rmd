@@ -2078,7 +2078,6 @@ ggplot(df, aes(x = virus, y = EZHIP, color = virus)) +
 ```
 
 PRC1/PRC2-TARGET GENE SIGNATURES
-PRC TARGET SIGNATURES (originally used GSEA pathways, but those are biased bc based on previous analysis so used these) 
 ```{r}
 prc1_targets <- msigdbr(
     species = "Homo sapiens",
