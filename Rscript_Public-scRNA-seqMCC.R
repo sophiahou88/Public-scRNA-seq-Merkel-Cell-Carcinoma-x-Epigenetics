@@ -666,7 +666,7 @@ dim(T104)
 
 #TUMOR T112A: QC
 #skipped here because below is filtering for figures again.
-dim(T112A) 
+#dim(T112A) 
 
 #MITOCHONDRIAL PERCENTAGE:\
 T112A[["percent.mt"]] <- PercentageFeatureSet(
@@ -2121,4 +2121,3 @@ tumor_level <- tumor_cells@meta.data %>%
     .groups = "drop")
 table(tumor_level$virus, tumor_level$EZHIP_detected)
 fisher.test(table(tumor_level$virus, tumor_level$EZHIP_detected))
-
