@@ -22,6 +22,7 @@ library(tidyverse)
 library(stringr)
 library(EnhancedVolcano)
 library(extrafont)
+set.seed(1)
 
 #IMPORT FONTS
 font_import(pattern = "Times", prompt = FALSE)
@@ -1022,6 +1023,7 @@ p5 <- DimPlot(
 p1 + p2 + p3 + p4 + p5 + plot_layout(ncol = 2)
 
 #RUN HARMONY
+set.seed(1)
 mcc <- RunHarmony(
   object = mcc,
   group.by.vars = "sample")
@@ -1470,6 +1472,7 @@ tumor_cells <- ScaleData(tumor_cells)
 tumor_cells <- RunPCA(
   tumor_cells,
   npcs = 30)
+set.seed(1)
 tumor_cells <- RunHarmony(
   tumor_cells,
   group.by.vars = "sample")
@@ -1752,6 +1755,7 @@ prc1_sets <- msigdbr(
   split(x = .$gene_symbol,
         f = .$gs_name)
 
+set.seed(1)
 fgsea_prc1 <- fgsea(
   pathways = prc1_sets,
   stats = ranks,
@@ -1776,6 +1780,8 @@ prc2_sets <- msigdbr(
       ignore.case = TRUE)) %>%
   split(x = .$gene_symbol,
         f = .$gs_name)
+
+set.seed(1)
 fgsea_prc2 <- fgsea(
   pathways = prc2_sets,
   stats = ranks,
