@@ -1,3 +1,7 @@
 MCC_tumor_state_markers.csv
 MCC_tumor_cluster_markers.csv
-* .csv
+*.csv
+*.docx
+*.md
+*.pages
+*.webm
