@@ -670,72 +670,72 @@ dim(T104)
 #dim(T112A) 
 
 #MITOCHONDRIAL PERCENTAGE:\
-T112A[["percent.mt"]] <- PercentageFeatureSet(
-  T112A,
-  pattern = "^MT-")
+#T112A[["percent.mt"]] <- PercentageFeatureSet(
+  #T112A,
+  #pattern = "^MT-")
 
 #VIOLIN PLOTS
-VlnPlot(
-  T112A,
-  features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
-  ncol = 3,
-  layer = "counts")
+#VlnPlot(
+  #T112A,
+  #features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
+  #ncol = 3,
+  #layer = "counts")
 
 #SCATTER PLOTS
-plot1 <- FeatureScatter(
-  T112A,
-  feature1 = "nCount_RNA",
-  feature2 = "nFeature_RNA")
-plot2 <- FeatureScatter(
-  T112A,
-  feature1 = "nCount_RNA",
-  feature2 = "percent.mt")
-plot1 + plot2
+#plot1 <- FeatureScatter(
+  #T112A,
+  #feature1 = "nCount_RNA",
+  #feature2 = "nFeature_RNA")
+#plot2 <- FeatureScatter(
+  #T112A,
+  #feature1 = "nCount_RNA",
+  #feature2 = "percent.mt")
+#plot1 + plot2
 
 #MAD CALCULATION
 #MEDIANS
-feature.med <- median(T112A$nFeature_RNA)
-count.med <- median(T112A$nCount_RNA)
-mt.med <- median(T112A$percent.mt)
+#feature.med <- median(T112A$nFeature_RNA)
+#count.med <- median(T112A$nCount_RNA)
+#t.med <- median(T112A$percent.mt)
 #MADS
-feature.mad <- mad(T112A$nFeature_RNA)
-count.mad <- mad(T112A$nCount_RNA)
-mt.mad <- mad(T112A$percent.mt)
+#eature.mad <- mad(T112A$nFeature_RNA)
+#count.mad <- mad(T112A$nCount_RNA)
+#mt.mad <- mad(T112A$percent.mt)
 #THRESHOLDS
-feature.low <-feature.med - 3*feature.mad
-feature.high <-feature.med + 3*feature.mad
-count.low <- count.med - 3*count.mad
-count.high <- count.med + 3*count.mad
-mt.high <- mt.med + 3*mt.mad
+#feature.low <-feature.med - 3*feature.mad
+#feature.high <-feature.med + 3*feature.mad
+#count.low <- count.med - 3*count.mad
+#count.high <- count.med + 3*count.mad
+#mt.high <- mt.med + 3*mt.mad
 
 #FILTER
-T112A <- subset(
-  T112A,
-  subset = nFeature_RNA > feature.low &
-    nFeature_RNA < feature.high &
-    nCount_RNA > count.low &
-    nCount_RNA < count.high &
-    percent.mt < mt.high)
+#T112A <- subset(
+  #T112A,
+  #subset = nFeature_RNA > feature.low &
+    #nFeature_RNA < feature.high &
+    #nCount_RNA > count.low &
+    #nCount_RNA < count.high &
+    #percent.mt < mt.high)
 
 #VIOLIN PLOTS
-VlnPlot(
-  T112A,
-  features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
-  ncol = 3)
+#VlnPlot(
+  #T112A,
+  #features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),
+  #ncol = 3)
 
 #SCATTER PLOTS
-plot1 <- FeatureScatter(
-  T112A,
-  feature1 = "nCount_RNA",
-  feature2 = "nFeature_RNA")
-plot2 <- FeatureScatter(
-  T112A,
-  feature1 = "nCount_RNA",
-  feature2 = "percent.mt")
-plot1 + plot2
+#plot1 <- FeatureScatter(
+  #T112A,
+  #feature1 = "nCount_RNA",
+  #feature2 = "nFeature_RNA")
+#plot2 <- FeatureScatter(
+  #T112A,
+  #feature1 = "nCount_RNA",
+  #feature2 = "percent.mt")
+#plot1 + plot2
 
 #How many cells remain after QC
-dim(T112A) 
+#dim(T112A) 
 
 
 #Representative visualization for QC-filtering, T112A
