@@ -1,0 +1,90 @@
+# ============================================================
+# 1. EFFECT SIZES AND 95% CONFIDENCE INTERVALS FROM THE PAPER'S OWN NUMBERS
+#    Needs no data or packages. Converts the reported Wilcoxon W values
+#    into Cliff's delta (Hanley-McNeil interval), and the Spearman rho
+#    values into Fisher z intervals.
+#    Result you got: PRC1 delta 0.461 (0.443-0.480), PRC2 delta 0.528 (0.510-0.545);
+#    rho 0.28 (0.269-0.291) and 0.32 (0.309-0.331). Matched my hand calculation.
+# ============================================================
+n_pos <- 4028; n_neg <- 22393
+W <- c(PRC1 = 24287190, PRC2 = 21308210)
+
+A  <- 1 - W / (n_pos * n_neg)
+Q1 <- A / (2 - A); Q2 <- 2 * A^2 / (1 + A)
+se <- sqrt((A * (1 - A) + (n_pos - 1) * (Q1 - A^2) + (n_neg - 1) * (Q2 - A^2)) / (n_pos * n_neg))
+round(data.frame(A, delta = 2*A - 1, lower = 2*(A - 1.96*se) - 1, upper = 2*(A + 1.96*se) - 1), 3)
+
+rho <- c(PRC1 = 0.28, PRC2 = 0.32); n <- 26421
+se_z <- sqrt((1 + rho^2 / 2) / (n - 3))
+round(data.frame(rho, lower = tanh(atanh(rho) - 1.96 * se_z), upper = tanh(atanh(rho) + 1.96 * se_z)), 3)
+
+
+# ============================================================
+# 2. TUMOR-LEVEL FISHER TESTS FOR EZHIP (LEAVE-ONE-TUMOR-OUT AND THE 1% RULE)
+#    Needs no data. Rows are virus-negative and virus-positive tumors;
+#    columns are EZHIP detected and not detected.
+#    Result you got: all tumors 0.048, omit T102 0.018, omit T98A/T98B/T104 0.107,
+#    omit a virus-positive tumor 0.143, 1% rule 0.167.
+# ============================================================
+f <- function(a, b, c, d) fisher.test(matrix(c(a, b, c, d), nrow = 2, byrow = TRUE))$p.value
+round(c(all_tumors = f(3,1,0,5), omit_T102 = f(3,0,0,5), omit_T98A_T98B_or_T104 = f(2,1,0,5),
+        omit_a_VP_tumor = f(3,1,0,4), one_percent_rule = f(2,2,0,5)), 3)
+
+
+# ============================================================
+# 3. EZHIP THRESHOLD SENSITIVITY (needs tumor_cells in your R session)
+#    Checks the object, looks at EZHIP values, then redefines "EZHIP-positive"
+#    four ways and reports per-tumor percentages, tumor- and cell-level
+#    Fisher tests, and Cliff's delta for each definition.
+#    The output you sent came from the first run, before the T112A fix,
+#    so it doesn't describe your current object.
+# ============================================================
+options(width = 200)
+
+# 3a. Check the object matches the paper (26421 cells; 22393 negative, 4028 positive)
+"EZHIP" %in% rownames(tumor_cells)
+ncol(tumor_cells)
+table(tumor_cells$EZHIP_status)
+
+# 3b. Look at the nonzero EZHIP values and how many cells each threshold keeps
+ez <- FetchData(tumor_cells, vars = "EZHIP")[, 1]
+median(tumor_cells$nCount_RNA)
+round(quantile(ez[ez > 0], c(.1, .25, .5, .75, .9)), 2)
+c(gt0 = sum(ez > 0), gt0.1 = sum(ez > 0.1), gt0.5 = sum(ez > 0.5))
+
+# 3c. Four definitions of EZHIP-positive
+md <- tumor_cells@meta.data
+md$ezhip  <- ez
+md$ez_umi <- as.numeric(GetAssayData(tumor_cells, assay = "RNA", layer = "counts")["EZHIP", colnames(tumor_cells)])
+
+defs <- list(
+  "> 0 (current)" = md$ezhip > 0,
+  "> 0.1"         = md$ezhip > 0.1,
+  "> 0.5"         = md$ezhip > 0.5,
+  ">= 2 UMIs"     = md$ez_umi >= 2)
+
+# 3d. Percent of cells called positive in each tumor, under each definition
+per_tumor <- bind_rows(lapply(names(defs), function(nm) {
+  md %>% mutate(pos = defs[[nm]]) %>%
+    group_by(sample, virus) %>%
+    summarise(n_cells = n(), n_pos = sum(pos), pct = round(100 * mean(pos), 3), .groups = "drop") %>%
+    mutate(definition = nm)
+}))
+print(per_tumor %>% filter(virus == "VN") %>% arrange(sample, definition), n = Inf)
+print(per_tumor %>% filter(virus == "VP") %>% group_by(definition) %>% summarise(VP_positive_cells = sum(n_pos)))
+
+# 3e. Tumor-level (two rules) and cell-level Fisher tests under each definition
+tests <- bind_rows(lapply(names(defs), function(nm) {
+  tt <- per_tumor %>% filter(definition == nm)
+  vl <- c("VN", "VP"); tf <- c(TRUE, FALSE)
+  tab_any <- table(factor(tt$virus, vl), factor(tt$n_pos > 0, tf))   # original rule: any positive cell
+  tab_1   <- table(factor(tt$virus, vl), factor(tt$pct >= 1, tf))    # new rule: at least 1% of cells
+  tab_c   <- table(factor(md$virus, vl), factor(defs[[nm]], tf))     # single-cell level
+  tibble(definition = nm,
+         VN_any  = tab_any["VN", "TRUE"], VP_any  = tab_any["VP", "TRUE"], p_any  = fisher.test(tab_any)$p.value,
+         VN_1pct = tab_1["VN", "TRUE"],   VP_1pct = tab_1["VP", "TRUE"],   p_1pct = fisher.test(tab_1)$p.value,
+         p_cell  = fisher.test(tab_c)$p.value)
+}))
+print(as.data.frame(tests), digits = 3)
+
+# 3f. Do
