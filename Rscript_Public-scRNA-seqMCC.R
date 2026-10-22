@@ -2185,3 +2185,53 @@ robust <- bind_rows(lapply(names(defs), function(nm) {
          delta_PRC2 = cliff(sig$PRC2_UCell[pos], sig$PRC2_UCell[!pos]))
 }))
 print(as.data.frame(robust), digits = 3)
+
+# ============================================================
+# MIXED-EFFECTS MODEL: EZHIP positivity vs PRC1/PRC2 target scores
+# within virus-negative cells (reviewer 1, comment 5)
+# ============================================================
+if (!requireNamespace("lmerTest", quietly = TRUE)) install.packages("lmerTest")
+library(lmerTest); library(dplyr); library(Seurat)
+
+tumor_cells <- CellCycleScoring(tumor_cells,
+                                s.features   = cc.genes.updated.2019$s.genes,
+                                g2m.features = cc.genes.updated.2019$g2m.genes)
+
+d  <- FetchData(tumor_cells, vars = c("PRC1_UCell", "PRC2_UCell", "EZHIP_status", "sample", "virus",
+                                      "seurat_clusters", "S.Score", "G2M.Score", "nCount_RNA"))
+vn <- d %>% filter(virus == "VN") %>%
+  mutate(EZHIP_pos = as.integer(EZHIP_status == "EZHIP_positive"),
+         cluster = factor(seurat_clusters), sample = factor(sample), log_depth = log10(nCount_RNA))
+print(table(vn$sample, vn$EZHIP_status))     # which tumors contribute positive cells
+
+res <- bind_rows(lapply(c("PRC1_UCell", "PRC2_UCell"), function(s) {
+  specs <- list("tumor only"                    = "EZHIP_pos + (1 | sample)",
+                "+ cluster"                     = "EZHIP_pos + cluster + (1 | sample)",
+                "+ cluster, cell cycle, depth"  = "EZHIP_pos + cluster + S.Score + G2M.Score + log_depth + (1 | sample)")
+  bind_rows(lapply(names(specs), function(nm) {
+    m   <- lmer(as.formula(paste(s, "~", specs[[nm]])), data = vn, REML = TRUE)
+    ci  <- confint(m, parm = "EZHIP_pos", method = "Wald")
+    sdv <- sd(vn[[s]])
+    data.frame(signature = sub("_UCell", "", s), model = nm,
+               beta_in_SD = unname(fixef(m)["EZHIP_pos"]) / sdv,
+               lower = ci["EZHIP_pos", 1] / sdv, upper = ci["EZHIP_pos", 2] / sdv,
+               p = summary(m)$coefficients["EZHIP_pos", "Pr(>|t|)"], singular = isSingular(m))
+  }))
+}))
+print(res, digits = 3)
+
+# Stratified: Cliff's delta within each tumor and each cluster (needs 20+ cells per group)
+cliff <- function(x, y) { n1 <- length(x); n2 <- length(y)
+U <- sum(rank(c(x, y))[1:n1]) - n1 * (n1 + 1) / 2
+2 * U / (n1 * n2) - 1 }
+strat <- function(by) {
+  vn %>% group_by(across(all_of(by))) %>% group_modify(~ {
+    p <- .x$EZHIP_pos == 1
+    out <- tibble(n_pos = sum(p), n_neg = sum(!p))
+    if (sum(p) >= 20 && sum(!p) >= 20) {
+      out$delta_PRC1 <- cliff(.x$PRC1_UCell[p], .x$PRC1_UCell[!p])
+      out$delta_PRC2 <- cliff(.x$PRC2_UCell[p], .x$PRC2_UCell[!p]) }
+    out })
+}
+print(strat("sample"), n = Inf)
+print(strat("cluster"), n = Inf)
