@@ -2127,3 +2127,61 @@ tumor_level <- tumor_cells@meta.data %>%
     .groups = "drop")
 table(tumor_level$virus, tumor_level$EZHIP_detected)
 fisher.test(table(tumor_level$virus, tumor_level$EZHIP_detected))
+
+# ============================================================
+# EZHIP THRESHOLD SENSITIVITY (reviewer comment 3)
+# ============================================================
+options(width = 200)
+
+# 1. CHECK THE OBJECT (paper: 26,421 tumor cells; 22,393 EZHIP-negative, 4,028 EZHIP-positive)
+ncol(tumor_cells)
+table(tumor_cells$EZHIP_status)
+
+# 2. FOUR DEFINITIONS OF "EZHIP-POSITIVE"
+md <- tumor_cells@meta.data
+md$ezhip  <- FetchData(tumor_cells, vars = "EZHIP")[, 1]
+md$ez_umi <- as.numeric(GetAssayData(tumor_cells, assay = "RNA", layer = "counts")["EZHIP", colnames(tumor_cells)])
+
+defs <- list(
+  "> 0 (current)" = md$ezhip > 0,
+  "> 0.1"         = md$ezhip > 0.1,
+  "> 0.5"         = md$ezhip > 0.5,
+  ">= 2 UMIs"     = md$ez_umi >= 2)
+
+# 3. PERCENT OF EACH TUMOR'S CELLS CALLED POSITIVE, UNDER EACH DEFINITION
+per_tumor <- bind_rows(lapply(names(defs), function(nm) {
+  md %>% mutate(pos = defs[[nm]]) %>%
+    group_by(sample, virus) %>%
+    summarise(n_cells = n(), n_pos = sum(pos), pct = round(100 * mean(pos), 3), .groups = "drop") %>%
+    mutate(definition = nm)
+}))
+print(per_tumor %>% filter(virus == "VN") %>% arrange(sample, definition), n = Inf)
+print(per_tumor %>% filter(virus == "VP") %>% group_by(definition) %>% summarise(VP_positive_cells = sum(n_pos)))
+
+# 4. FISHER TESTS UNDER EACH DEFINITION
+#    tumor-level, rule 1: any positive cell | rule 2: at least 1% of cells | cell level
+tests <- bind_rows(lapply(names(defs), function(nm) {
+  tt <- per_tumor %>% filter(definition == nm)
+  vl <- c("VN", "VP"); tf <- c(TRUE, FALSE)
+  tab_any <- table(factor(tt$virus, vl), factor(tt$n_pos > 0, tf))
+  tab_1   <- table(factor(tt$virus, vl), factor(tt$pct >= 1, tf))
+  tab_c   <- table(factor(md$virus, vl), factor(defs[[nm]], tf))
+  tibble(definition = nm,
+         VN_any  = tab_any["VN", "TRUE"], VP_any  = tab_any["VP", "TRUE"], p_any  = fisher.test(tab_any)$p.value,
+         VN_1pct = tab_1["VN", "TRUE"],   VP_1pct = tab_1["VP", "TRUE"],   p_1pct = fisher.test(tab_1)$p.value,
+         p_cell  = fisher.test(tab_c)$p.value)
+}))
+print(as.data.frame(tests), digits = 3)
+
+# 5. DO EZHIP-POSITIVE CELLS STILL SCORE HIGHER ON THE PRC1 AND PRC2 SIGNATURES?
+cliff <- function(x, y) { n1 <- length(x); n2 <- length(y)
+U <- sum(rank(c(x, y))[1:n1]) - n1 * (n1 + 1) / 2
+2 * U / (n1 * n2) - 1 }
+sig <- FetchData(tumor_cells, vars = c("PRC1_UCell", "PRC2_UCell"))
+robust <- bind_rows(lapply(names(defs), function(nm) {
+  pos <- defs[[nm]]
+  tibble(definition = nm, n_pos = sum(pos),
+         delta_PRC1 = cliff(sig$PRC1_UCell[pos], sig$PRC1_UCell[!pos]),
+         delta_PRC2 = cliff(sig$PRC2_UCell[pos], sig$PRC2_UCell[!pos]))
+}))
+print(as.data.frame(robust), digits = 3)
