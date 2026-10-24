@@ -1916,29 +1916,43 @@ p +
 
 
 #EZHIP expression by subtype
+# EZHIP expression by subtype (Fig. 4b), with the virus-positive group labeled as zero
+set.seed(1)   # keeps the jitter identical each time
+
 df <- FetchData(tumor_cells, vars = c("EZHIP", "virus"))
 pink_palette <- c("VN" = "#F4ACF9", "VP" = "#F4ACF9")
+y_label <- 0.12 * max(df$EZHIP)   # places the label just above the zero line
 
-ggplot(df, aes(x = virus, y = EZHIP, color = virus)) +
+p4b <- ggplot(df, aes(x = virus, y = EZHIP, color = virus)) +
   geom_jitter(
-    position = position_jitter(width = 0.25), 
-    alpha = 0.4, 
+    position = position_jitter(width = 0.25),
+    alpha = 0.4,
     size = 1.0) +
+  annotate(
+    "text", x = 2, y = y_label,
+    label = 'No~italic("EZHIP")*"-positive cells"', parse = TRUE,
+    family = "Times New Roman", size = 4, color = "black") +
   scale_color_manual(values = pink_palette) +
   scale_x_discrete(labels = c("VN" = "Virus-negative", "VP" = "Virus-positive")) +
   theme_classic(base_size = 14, base_family = "Times New Roman") +
   labs(
-    title = "EZHIP Expression by Subtype",
+    title = expression(bolditalic("EZHIP") ~ bold("Expression by Subtype")),
     x = "Subtype",
-    y = "EZHIP Expression") +
+    y = expression(italic("EZHIP") ~ "Expression")) +
   theme(
     text = element_text(family = "Times New Roman"),
-    plot.title = element_text(family = "Times New Roman", hjust = 0.5, face = "bold", size = 14),
+    plot.title = element_text(family = "Times New Roman", hjust = 0.5, size = 14),
     legend.position = "none",
     axis.text.x = element_text(family = "Times New Roman", color = "black", size = 11),
     axis.text.y = element_text(family = "Times New Roman", color = "black"),
     axis.title.x = element_text(family = "Times New Roman", margin = margin(t = 8)),
     axis.title.y = element_text(family = "Times New Roman", margin = margin(r = 8)))
+
+p4b
+
+# High-resolution export (600 dpi) for the figure panel
+ggsave("Fig4b.png", p4b, width = 4.5, height = 3.4, units = "in", dpi = 600)
+
 
 #PRC1/PRC2-TARGET GENE SIGNATURES
 prc1_targets <- msigdbr(
