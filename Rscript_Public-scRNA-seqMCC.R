@@ -2235,3 +2235,8 @@ strat <- function(by) {
 }
 print(strat("sample"), n = Inf)
 print(strat("cluster"), n = Inf)
+
+#Extra test
+g2m <- cc.genes.updated.2019$g2m.genes; s <- cc.genes.updated.2019$s.genes
+c(PRC1_genes = length(prc1_targets), PRC1_G2M = length(intersect(prc1_targets, g2m)), PRC1_S = length(intersect(prc1_targets, s)),
+  PRC2_genes = length(prc2_targets), PRC2_G2M = length(intersect(prc2_targets, g2m)), PRC2_S = length(intersect(prc2_targets, s)))
